@@ -1,0 +1,17 @@
+{
+  "session_id": "09af5b23-3d8b-4536-b447-5c4a764c4d6b",
+  "job_id": "job_f11061",
+  "status": "done",
+  "source": "https://www.pdp.gov.my/ppdpv1/wp-content/uploads/2024/07/Peraturan-peraturan-Perlindungan-Data-Peribadi.pdf",
+  "version": 1,
+  "doc_id": "doc_9b3c48",
+  "collection": "regulations",
+  "pages_total": 17,
+  "pages_done": 17,
+  "pages_via_vlm": 17,
+  "pages_via_pdfplumber": 0,
+  "pages_failed": 0,
+  "duration_sec": 318.9,
+  "markdown_path": "C:/Users/aldo/Documents/GitHub/extraction_html_pdf_tool/markdown_exports/https___www_pdp_gov_my_ppdpv1_wp-content_uploads_2024_07_Peraturan-peraturan-Per_doc_9b3c48.md",
+  "error": null
+}

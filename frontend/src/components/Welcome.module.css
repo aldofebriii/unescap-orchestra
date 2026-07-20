@@ -1,0 +1,7 @@
+.welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; text-align: center; padding: 40px; gap: 16px; }
+.icon { width: 72px; height: 72px; border-radius: 20px; background: linear-gradient(135deg, var(--accent), var(--purple)); display: flex; align-items: center; justify-content: center; font-size: 36px; box-shadow: 0 0 40px var(--accent-glow), 0 0 80px rgba(167,139,250,0.1); margin-bottom: 8px; }
+.heading { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.desc { font-size: 14px; color: var(--text-secondary); max-width: 440px; line-height: 1.6; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+.chip { padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-secondary); font-family: var(--font-sans); font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.chip:hover { border-color: var(--accent); color: var(--accent-hover); background: var(--accent-glow); }

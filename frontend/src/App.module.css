@@ -1,0 +1,21 @@
+.chat { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
+@media (max-width: 640px) { .chat { padding: 16px; } }
+
+/* ── Pipeline layout: session sidebar + main area ── */
+.pipelineLayout {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+.pipelineMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 720px) {
+  .pipelineLayout { flex-direction: column; }
+}

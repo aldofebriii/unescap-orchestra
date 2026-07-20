@@ -1,0 +1,16 @@
+{
+  "mcpServers": [
+    {
+      "name": "unescap-server-1",
+      "url": "http://localhost:8000"
+    },
+    {
+      "name": "unescap-server-2",
+      "url": "http://localhost:8420"
+    },
+    {
+      "name": "unescap-server-3",
+      "url": "http://localhost:8912"
+    }
+  ]
+}

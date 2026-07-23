@@ -139,6 +139,27 @@ function regulations() {
   return AppDataSource.getRepository(Regulation);
 }
 
+/**
+ * Link a Job and a Regulation by setting their FK columns via raw SQL.
+ *
+ * TypeORM's `save()` can silently null-out FK columns when both sides of a
+ * OneToOne have `@JoinColumn`, or when the relation object is undefined.
+ * Using raw queries avoids all entity-lifecycle issues.
+ */
+async function linkJobAndRegulation(jobId: string, regulationId: string): Promise<void> {
+  const qr = AppDataSource.createQueryRunner();
+  try {
+    await qr.query(`UPDATE regulations SET job_id = $1 WHERE id = $2`, [jobId, regulationId]);
+    await qr.query(`UPDATE jobs SET regulation_id = $1 WHERE "jobId" = $2`, [regulationId, jobId]);
+    console.log(`[linkJobAndRegulation] ✔ Linked job ${jobId} ↔ regulation ${regulationId}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[linkJobAndRegulation] ✖ Failed to link job ${jobId} ↔ regulation ${regulationId}: ${msg}`);
+  } finally {
+    await qr.release();
+  }
+}
+
 export interface RegulationInput {
   country: string;
   regulationName: string;
@@ -168,6 +189,8 @@ export async function recordRegulation(
   const repo = regulations();
   const incomingUrls = dedupeUrls(input.urls ?? []);
 
+  console.log(`[recordRegulation] input.jobId = ${input.jobId ?? "null"}, regulationName = "${input.regulationName}"`);
+
   // Translate the title to English so the same law dedupes across languages.
   const englishName = await translateToEnglish(input.regulationName);
 
@@ -191,14 +214,23 @@ export async function recordRegulation(
 
     best.hitCount += 1;
     if (input.lawNumber && !best.lawNumber) best.lawNumber = input.lawNumber;
+    if (input.summary && !best.summary) best.summary = input.summary;
+    if (input.mdPath && !best.mdPath) best.mdPath = input.mdPath;
 
     if (addedUrls.length > 0) {
       best.urls = [...(best.urls ?? []), ...addedUrls];
-      await repo.save(best);
-      return { status: "updated", regulation: best, addedUrls, similarity: bestScore };
     }
 
     await repo.save(best);
+
+    // Link job ↔ regulation via explicit UPDATE queries (bypasses TypeORM relation issues)
+    if (input.jobId) {
+      await linkJobAndRegulation(input.jobId, best.id);
+    }
+
+    if (addedUrls.length > 0) {
+      return { status: "updated", regulation: best, addedUrls, similarity: bestScore };
+    }
     return { status: "exists", regulation: best, similarity: bestScore };
   }
 
@@ -210,9 +242,17 @@ export async function recordRegulation(
     normalizedName: normalizeName(englishName),
     lawNumber: input.lawNumber ?? null,
     urls: incomingUrls,
+    summary: input.summary ?? null,
+    mdPath: input.mdPath ?? null,
     hitCount: 1,
   });
   await repo.save(created);
+
+  // Link job ↔ regulation via explicit UPDATE queries (bypasses TypeORM relation issues)
+  if (input.jobId) {
+    await linkJobAndRegulation(input.jobId, created.id);
+  }
+
   return { status: "created", regulation: created };
 }
 

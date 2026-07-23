@@ -116,13 +116,18 @@ app.get("/api/documents/:jobId/detail", async (req, res) => {
     }
   }
 
-  // Find regulation by matching job.source against regulation.regulationName
+  // Find regulation linked to this job (prioritize regulationId, then jobId, then source fallback)
   let regulation = null;
-  if (job.source) {
-    const regulationRepo = AppDataSource.getRepository(Regulation);
-    regulation = await regulationRepo.findOne({
-      where: { regulationName: job.source },
-    });
+  const regulationRepo = AppDataSource.getRepository(Regulation);
+
+  if (job.regulationId) {
+    regulation = await regulationRepo.findOne({ where: { id: job.regulationId } });
+  }
+  if (!regulation) {
+    regulation = await regulationRepo.findOne({ where: { jobId: job.jobId } });
+  }
+  if (!regulation && job.source) {
+    regulation = await regulationRepo.findOne({ where: { regulationName: job.source } });
   }
 
   // Provisions for this regulation
@@ -190,6 +195,9 @@ app.get("/api/ingest/job/:jobId", async (req, res) => {
 });
 
 // ── Ingest callback (from MCP server) ──
+// The MCP server (extraction_html_pdf_tool) waits for this callback to
+// complete (timeout 600s), so we run the full pipeline synchronously:
+// save job → auto-extract provisions → link job ↔ regulation → classify + score.
 app.post("/api/ingest/callback", async (req, res) => {
   try {
     const payload = req.body as CallbackPayload;
@@ -207,14 +215,13 @@ app.post("/api/ingest/callback", async (req, res) => {
 
     console.log(`[callback] Job ${job.jobId} updated: ${job.status} (${job.pagesDone}/${job.pagesTotal} pages)`);
 
-    // ── Auto-extract provisions once ingestion has produced markdown ──
-    // Fire-and-forget so the callback responds immediately; the extraction
-    // reads the exported markdown, forces an emit_provisions call, and persists
-    // to the regulations + provisions tables. Only runs on done/partial with a
-    // markdown path present.
+    let regulationId: string | null = null;
+
+    // ── Auto-extract provisions + classify/score (synchronous) ──
+    // Runs before responding so all data (regulation, provisions, scores,
+    // job ↔ regulation link) is committed before the callback returns.
     if ((job.status === "done" || job.status === "partial") && job.markdownPath) {
       const doc = await getSessionDocumentByJob(job.jobId);
-      // Country from the session document; fall back to "Unknown" if unlinked.
       const country = doc
         ? (await getSession(doc.sessionId))?.country ?? "Unknown"
         : "Unknown";
@@ -222,25 +229,22 @@ app.post("/api/ingest/callback", async (req, res) => {
       const url = doc?.url ?? null;
       const conversationId = doc?.sessionId ?? payload.session_id ?? null;
 
-      void autoExtractProvisions({
-        markdownPath: job.markdownPath,
-        country,
-        source,
-        url,
-        conversationId,
-      })
-        .then(async (r) => {
-          if (r.ok) {
-            console.log(`[auto-extract] Job ${job.jobId}: stored ${r.provisionCount} provision(s) (regulation ${r.regulationId})`);
+      try {
+        const r = await autoExtractProvisions({
+          markdownPath: job.markdownPath,
+          country,
+          source,
+          url,
+          conversationId,
+          jobId: job.jobId,
+        });
 
-            // ── Chain: classify + score the regulation on unescap-server-3 ──
-            // Uses the ChromaDB doc_id (from ingestion) as the scoring input and
-            // persists the per-indicator results to the regulation_scores table,
-            // linked to the Regulation registry row we just recorded.
-            if (!job.docId) {
-              console.warn(`[classify-score] Job ${job.jobId}: skipped — no doc_id on job`);
-              return;
-            }
+        if (r.ok) {
+          regulationId = r.regulationId ?? null;
+          console.log(`[auto-extract] Job ${job.jobId}: stored ${r.provisionCount} provision(s) (regulation ${r.regulationId})`);
+
+          // ── Chain: classify + score the regulation on unescap-server-3 ──
+          if (job.docId) {
             try {
               const s = await classifyAndScoreRegulation({
                 docId: job.docId,
@@ -258,27 +262,28 @@ app.post("/api/ingest/callback", async (req, res) => {
               console.error(`[classify-score] Job ${job.jobId}: unexpected error — ${msg}`);
             }
           } else {
-            console.warn(`[auto-extract] Job ${job.jobId}: skipped — ${r.error}`);
+            console.warn(`[classify-score] Job ${job.jobId}: skipped — no doc_id on job`);
           }
-        })
-        .catch((err) => {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.error(`[auto-extract] Job ${job.jobId}: unexpected error — ${msg}`);
-        });
+        } else {
+          console.warn(`[auto-extract] Job ${job.jobId}: skipped — ${r.error}`);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[auto-extract] Job ${job.jobId}: unexpected error — ${msg}`);
+      }
     }
 
     res.json({
       success: true,
       job_id: job.jobId,
       status: job.status,
+      regulation_id: regulationId,
       updated_at: job.updatedAt,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[callback] Error: ${message}`);
-    res.status(500).json({
-      error: message,
-    });
+    res.status(500).json({ error: message });
   }
 });
 

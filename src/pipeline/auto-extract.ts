@@ -120,6 +120,8 @@ export interface AutoExtractInput {
   conversationId?: string | null;
   /** Fallback source URL to attach when the model omits one. */
   url?: string | null;
+  /** The ingest job ID this extraction stems from. */
+  jobId?: string | null;
 }
 
 export interface AutoExtractResult {
@@ -234,6 +236,7 @@ export async function autoExtractProvisions(
       regulationName: payload.regulation_name,
       lawNumber: payload.provisions[0]?.law_number ?? null,
       urls: mergedUrls,
+      jobId: input.jobId ?? null,
     });
     await saveProvisionsToDb(outcome.regulation.id, input.conversationId ?? null, payload.provisions);
     return {

@@ -4,7 +4,9 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToOne,
 } from "typeorm";
+import { Regulation } from "./Regulation.js";
 
 @Entity("jobs")
 export class Job {
@@ -58,4 +60,12 @@ export class Job {
 
   @UpdateDateColumn({ name: "updated_at", type: "timestamptz" })
   updatedAt!: Date;
+
+  /** Stored regulation UUID — plain column, updated manually after recordRegulation. */
+  @Column({ name: "regulation_id", type: "uuid", nullable: true })
+  regulationId!: string | null;
+
+  /** Inverse side of the OneToOne — loaded via Regulation's @JoinColumn(job_id). */
+  @OneToOne(() => Regulation, (regulation) => regulation.job)
+  regulation!: Regulation | null;
 }

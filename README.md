@@ -74,9 +74,33 @@ Finding, retrieving, and analyzing legal/regulatory documents from government we
 
 - Node.js ≥ 18
 - PostgreSQL running locally
-- At least one MCP server running
+- Python (for some of the MCP tool dependencies if applicable)
 
-### Installation
+### 1. Start the MCP Servers
+
+Before starting the UNESCAP Orchestra, you must run the required MCP servers in separate terminals. Based on the default `config.json`, open three separate terminals and start them:
+
+```bash
+# Terminal 1 - mcp-unescap-tool-1 (Port 8000)
+cd ../mcp-unescap-tool-1
+# Start the server according to its instructions (e.g., node, python, or npm run)
+```
+
+```bash
+# Terminal 2 - extraction_html_pdf_tool (Port 8420)
+cd ../extraction_html_pdf_tool
+# Start the server according to its instructions
+```
+
+```bash
+# Terminal 3 - UNESCAPtool3 (Port 8912)
+cd ../UNESCAPtool3
+# Start the server according to its instructions
+```
+
+### 2. Installation (UNESCAP Orchestra)
+
+In a new terminal, navigate to the `unescap-orchestra` directory:
 
 ```bash
 # 1. Install all dependencies (backend + frontend) + sync database schema
@@ -87,7 +111,7 @@ cp .env.example .env
 # Edit .env with your database URL and OpenAI endpoint
 
 # 3. Configure MCP servers
-# Edit config.json with your MCP server URLs
+# Edit config.json with your MCP server URLs if they differ from the defaults
 ```
 
 ### Configuration
@@ -98,8 +122,6 @@ cp .env.example .env
 OPENAI_BASE_URL=http://localhost:4000/v1
 OPENAI_MODEL=gpt-4o
 DATABASE_URL=postgresql://postgres:password@localhost:5432/unescap_orchestra
-DATABASE_USERNAME=postgres
-DATABASE_PASSWORD=your_password
 PORT=3000
 ```
 
@@ -108,21 +130,31 @@ PORT=3000
 ```json
 {
   "mcpServers": [
-    { "name": "unescap-server-1", "url": "http://localhost:8000" },
-    { "name": "unescap-server-2", "url": "http://localhost:8001" }
+    {
+      "name": "unescap-server-1",
+      "url": "http://localhost:8000"
+    },
+    {
+      "name": "unescap-server-2",
+      "url": "http://localhost:8420"
+    },
+    {
+      "name": "unescap-server-3",
+      "url": "http://localhost:8912"
+    }
   ]
 }
 ```
 
-### Running
+### 3. Running the Orchestra
 
-Open **two terminals** from the project root:
+Open **two more terminals** inside the `unescap-orchestra` directory:
 
 ```bash
-# Terminal 1 — Backend (port 3000)
+# Terminal 4 — Backend (port 3000)
 npm run dev
 
-# Terminal 2 — Frontend (port 5173)
+# Terminal 5 — Frontend (port 5173)
 npm run fe:dev
 ```
 

@@ -5,7 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
-  ManyToOne,
+  OneToOne,
   JoinColumn,
 } from "typeorm";
 import { Job } from "./Job.js";
@@ -59,8 +59,12 @@ export class Regulation {
   @Column({ name: "md_path", type: "varchar", nullable: true })
   mdPath!: string | null;
 
+  /** Foreign key for the originating ingest job. */
+  @Column({ name: "job_id", type: "varchar", nullable: true })
+  jobId!: string | null;
+
   /** Link to the originating ingest job. */
-  @ManyToOne(() => Job, { nullable: true })
+  @OneToOne(() => Job, (job) => job.regulation, { nullable: true })
   @JoinColumn({ name: "job_id" })
   job!: Job | null;
 
